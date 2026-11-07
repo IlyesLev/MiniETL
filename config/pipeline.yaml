@@ -1,0 +1,15 @@
+pipeline:
+  name: sqlserver_to_postgresql
+
+source:
+  type: sqlserver
+  schema: dbo
+  table: Author
+
+destination:
+  type: snowflake
+  schema: PUBLIC
+  table: AUTHOR
+
+load:
+  mode: full_refresh

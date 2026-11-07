@@ -1,0 +1,7 @@
+pyodbc
+snowflake-connector-python[pandas]
+pandas
+python-dotenv
+PyYAML
+psycopg[binary]
+SQLAlchemy
