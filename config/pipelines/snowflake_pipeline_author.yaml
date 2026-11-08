@@ -1,5 +1,6 @@
 pipeline:
-  name: sqlserver_to_postgresql
+  name: snowflake_pipeline_author
+  description: import Author records into Snowflake
 
 source:
   type: sqlserver
