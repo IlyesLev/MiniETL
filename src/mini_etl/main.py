@@ -1,9 +1,10 @@
+import argparse
 import logging
 from pathlib import Path
 import pandas as pd
 import pyodbc
-import yaml
 from dotenv import load_dotenv
+from mini_etl.config.loader import load_pipeline_config
 from mini_etl.destinations import postgresql
 from mini_etl.destinations import snowflake
 
@@ -21,14 +22,6 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
-
-
-def load_pipeline_config():
-
-    config_path = PROJECT_ROOT / "config" / "pipelines" / "postgresql_pipeline_author.yaml"
-
-    with open(config_path, "r", encoding="utf-8") as file:
-        return yaml.safe_load(file)
 
 
 # --------------------------------------------------
@@ -131,16 +124,36 @@ def load_data(dataframe, config):
 # --------------------------------------------------
 # 5. Run pipeline
 # --------------------------------------------------
-def run_pipeline():
-    logger.info("MiniETL pipeline started")
-    config = load_pipeline_config()
+def run_pipeline(pipeline_name: str):
+    logger.info(
+        "MiniETL pipeline started: %s",
+        pipeline_name
+    )
+
+    config = load_pipeline_config(pipeline_name)
+
     dataframe = extract_data(config)
     load_data(dataframe, config)
+
     logger.info(
         "MiniETL pipeline completed successfully"
     )
 
+def main():
+    parser = argparse.ArgumentParser(
+        description="Run a MiniETL pipeline."
+    )
+
+    parser.add_argument(
+        "pipeline_name",
+        help="Name of the pipeline configuration to execute."
+    )
+
+    args = parser.parse_args()
+
+    run_pipeline(args.pipeline_name)
+
 
 if __name__ == "__main__":
-    run_pipeline()
+    main()
 
