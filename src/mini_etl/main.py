@@ -1,8 +1,6 @@
 import argparse
 import logging
 from pathlib import Path
-import pandas as pd
-import pyodbc
 from dotenv import load_dotenv
 from mini_etl.config.loader import load_pipeline_config
 from mini_etl.destinations import postgresql
@@ -10,7 +8,7 @@ from mini_etl.destinations import snowflake
 from mini_etl.sources.sqlserver import extract_data
 
 # --------------------------------------------------
-# 1. Project configuration
+#  Project configuration
 # --------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -25,17 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 # --------------------------------------------------
-# 2. SQL Server connection
-# --------------------------------------------------
-
-
-# --------------------------------------------------
-# 3. Extract data
-# --------------------------------------------------
-
-
-# --------------------------------------------------
-# 4. Destination router
+#  Destination router
 # --------------------------------------------------
 def load_data(dataframe, config):
     destination = config["destination"]
@@ -63,7 +51,7 @@ def load_data(dataframe, config):
 
 
 # --------------------------------------------------
-# 5. Run pipeline
+#  Run pipeline
 # --------------------------------------------------
 def run_pipeline(pipeline_name: str):
     logger.info(
