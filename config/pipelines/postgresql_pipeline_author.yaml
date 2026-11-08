@@ -1,0 +1,16 @@
+pipeline:
+  name: postgresql_pipeline_author
+  description: import Author records into PostgreSQL
+
+source:
+  type: sqlserver
+  schema: dbo
+  table: Author
+
+destination:
+  type: postgresql
+  schema: PUBLIC
+  table: AUTHOR
+
+load:
+  mode: full_refresh
