@@ -9,8 +9,8 @@ source:
 
 destination:
   type: postgresql
-  schema: PUBLIC
-  table: AUTHOR
+  schema: public
+  table: author
 
 load:
   mode: full_refresh
