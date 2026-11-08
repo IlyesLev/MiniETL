@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 def load_pipeline_config():
 
-    config_path = PROJECT_ROOT / "config" / "pipeline.yaml"
+    config_path = PROJECT_ROOT / "config" / "pipelines" / "snowflake_pipeline_author.yaml"
 
     with open(config_path, "r", encoding="utf-8") as file:
         return yaml.safe_load(file)
