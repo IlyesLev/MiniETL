@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from mini_etl.config.loader import load_pipeline_config
 from mini_etl.destinations import postgresql
 from mini_etl.destinations import snowflake
-
+from mini_etl.sources.sqlserver import extract_data
 
 # --------------------------------------------------
 # 1. Project configuration
@@ -27,70 +27,11 @@ logger = logging.getLogger(__name__)
 # --------------------------------------------------
 # 2. SQL Server connection
 # --------------------------------------------------
-def get_sqlserver_connection():
-
-    import os
-
-    trusted = os.getenv(
-        "SQLSERVER_TRUSTED_CONNECTION", "true"
-    ).lower() == "true"
-
-    connection_string = (
-        "DRIVER={ODBC Driver 18 for SQL Server};"
-        f"SERVER={os.environ['SQLSERVER_HOST']};"
-        f"DATABASE={os.environ['SQLSERVER_DATABASE']};"
-        "Encrypt=yes;"
-        "TrustServerCertificate=yes;"
-    )
-
-    if trusted:
-        connection_string += "Trusted_Connection=yes;"
-    else:
-        connection_string += (
-            f"UID={os.environ['SQLSERVER_USERNAME']};"
-            f"PWD={os.environ['SQLSERVER_PASSWORD']};"
-        )
-
-    return pyodbc.connect(connection_string)
 
 
 # --------------------------------------------------
 # 3. Extract data
 # --------------------------------------------------
-def extract_data(config):
-    source = config["source"]
-    schema = source["schema"]
-    table = source["table"]
-
-    query = (
-        f"SELECT * FROM "
-        f"[{schema.replace(']', ']]')}]."
-        f"[{table.replace(']', ']]')}]"
-    )
-
-    logger.info(
-        "Extracting from SQL Server: %s.%s",
-        schema,
-        table
-    )
-
-    connection = get_sqlserver_connection()
-
-    try:
-        dataframe = pd.read_sql_query(
-            query,
-            connection
-        )
-    finally:
-        connection.close()
-
-    logger.info(
-        "Extracted %s rows and %s columns",
-        len(dataframe),
-        len(dataframe.columns)
-    )
-
-    return dataframe
 
 
 # --------------------------------------------------
@@ -132,7 +73,7 @@ def run_pipeline(pipeline_name: str):
 
     config = load_pipeline_config(pipeline_name)
 
-    dataframe = extract_data(config)
+    dataframe = extract_data(config["source"])
     load_data(dataframe, config)
 
     logger.info(
