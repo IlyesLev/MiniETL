@@ -1,0 +1,8 @@
+Metadata-Version: 2.4
+Name: mini-etl
+Version: 0.1.0
+Summary: A modular ETL pipeline
+Requires-Python: >=3.10
+Requires-Dist: PyYAML
+Requires-Dist: SQLAlchemy
+Requires-Dist: python-dotenv
