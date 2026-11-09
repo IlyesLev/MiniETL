@@ -1,5 +1,8 @@
+
 from pathlib import Path
+
 import yaml
+
 
 # The repository root is four levels above this file.
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -9,13 +12,13 @@ PIPELINE_CONFIG_DIR = PROJECT_ROOT / "config" / "pipelines"
 
 def load_pipeline_config(pipeline_name: str) -> dict:
     """
-    Load a pipeline configuration from its YAML file.
+    Load and validate a pipeline configuration from its YAML file.
 
     Args:
         pipeline_name: Name of the pipeline to load.
 
     Returns:
-        Dictionary containing the pipeline configuration.
+        Dictionary containing the validated pipeline configuration.
     """
 
     config_path = PIPELINE_CONFIG_DIR / f"{pipeline_name}.yaml"
@@ -36,10 +39,27 @@ def load_pipeline_config(pipeline_name: str) -> dict:
     required_sections = ["pipeline", "source", "destination", "load"]
 
     for section in required_sections:
-        if not isinstance(config.get(section), dict) or not config[section]:
+        if section not in config or not isinstance(config[section], dict):
             raise ValueError(
                 f"Missing or invalid '{section}' section "
                 f"in {config_path}"
             )
+
+    required_keys = {
+        "pipeline": ["name"],
+        "source": ["type", "schema", "table"],
+        "destination": ["type", "schema", "table"],
+        "load": ["mode"],
+    }
+
+    for section, keys in required_keys.items():
+        for key in keys:
+            value = config[section].get(key)
+
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(
+                    f"Missing or empty required key "
+                    f"'{section}.{key}' in {config_path}"
+                )
 
     return config
