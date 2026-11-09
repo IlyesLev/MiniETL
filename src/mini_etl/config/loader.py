@@ -36,7 +36,7 @@ def load_pipeline_config(pipeline_name: str) -> dict:
     required_sections = ["pipeline", "source", "destination", "load"]
 
     for section in required_sections:
-        if not isinstance(config.get(section), dict):
+        if not isinstance(config.get(section), dict) or not config[section]:
             raise ValueError(
                 f"Missing or invalid '{section}' section "
                 f"in {config_path}"
