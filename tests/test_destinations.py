@@ -67,6 +67,71 @@ class TestPostgreSQLDestination(unittest.TestCase):
         mock_engine.dispose.assert_called_once()
 
 
+            @patch("mini_etl.destinations.postgresql.get_postgresql_engine")
+    def test_failed_load_disposes_engine(self, mock_get_engine):
+        dataframe = pd.DataFrame({"id": [1]})
+
+        mock_engine = MagicMock()
+        mock_connection_context = MagicMock()
+        mock_engine.begin.return_value = mock_connection_context
+
+        mock_connection_context.__enter__.return_value = MagicMock()
+        mock_connection_context.__exit__.side_effect = RuntimeError(
+            "Database error"
+        )
+
+        mock_get_engine.return_value = mock_engine
+
+        with self.assertRaisesRegex(RuntimeError, "Database error"):
+            postgresql.load_data(
+                dataframe,
+                {"schema": "public", "table": "users"},
+                {"mode": "full_refresh"},
+            )
+
+        mock_engine.dispose.assert_called_once()
+
+    @patch("mini_etl.destinations.postgresql.get_postgresql_engine")
+    def test_unsupported_mode_does_not_create_engine(self, mock_get_engine):
+        dataframe = pd.DataFrame({"id": [1]})
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Unsupported PostgreSQL load mode",
+        ):
+            postgresql.load_data(
+                dataframe,
+                {"schema": "public", "table": "users"},
+                {"mode": "append"},
+            )
+
+        mock_get_engine.assert_not_called()
+
+    @patch("mini_etl.destinations.postgresql.get_postgresql_engine")
+    def test_failed_to_sql_disposes_engine(self, mock_get_engine):
+        dataframe = pd.DataFrame({"id": [1]})
+
+        mock_engine = MagicMock()
+        mock_connection = MagicMock()
+
+        mock_engine.begin.return_value.__enter__.return_value = mock_connection
+        mock_get_engine.return_value = mock_engine
+
+        with patch.object(
+            dataframe,
+            "to_sql",
+            side_effect=RuntimeError("Write failed"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "Write failed"):
+                postgresql.load_data(
+                    dataframe,
+                    {"schema": "public", "table": "users"},
+                    {"mode": "full_refresh"},
+                )
+
+        mock_engine.dispose.assert_called_once()
+
+
 class TestSnowflakeDestination(unittest.TestCase):
 
     @patch("mini_etl.destinations.snowflake.get_snowflake_connection")
