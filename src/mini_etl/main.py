@@ -1,5 +1,6 @@
 import argparse
 import logging
+import pandas as pd
 from pathlib import Path
 from dotenv import load_dotenv
 from mini_etl.config.loader import load_pipeline_config
@@ -25,10 +26,16 @@ logger = logging.getLogger(__name__)
 # --------------------------------------------------
 #  Destination router
 # --------------------------------------------------
-def load_data(dataframe, config):
+def load_data(
+    dataframe: pd.DataFrame,
+    config: dict
+) -> None:
+    """Route extracted data to the configured destination."""
+
     destination = config["destination"]
     load_config = config["load"]
     destination_type = destination["type"].lower()
+
     if destination_type == "postgresql":
         postgresql.load_data(
             dataframe,
@@ -48,7 +55,6 @@ def load_data(dataframe, config):
             f"Unsupported destination type: "
             f"{destination_type}"
         )
-
 
 # --------------------------------------------------
 #  Run pipeline
