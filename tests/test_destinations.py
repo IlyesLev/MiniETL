@@ -67,7 +67,7 @@ class TestPostgreSQLDestination(unittest.TestCase):
         mock_engine.dispose.assert_called_once()
 
 
-            @patch("mini_etl.destinations.postgresql.get_postgresql_engine")
+    @patch("mini_etl.destinations.postgresql.get_postgresql_engine")
     def test_failed_load_disposes_engine(self, mock_get_engine):
         dataframe = pd.DataFrame({"id": [1]})
 
