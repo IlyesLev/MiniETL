@@ -211,6 +211,54 @@ class TestSnowflakeDestination(unittest.TestCase):
         mock_connection.close.assert_called_once()
 
 
+    @patch("mini_etl.destinations.snowflake.write_pandas")
+    @patch("mini_etl.destinations.snowflake.get_snowflake_connection")
+    def test_failed_load_closes_connection(
+        self,
+        mock_get_connection,
+        mock_write_pandas
+    ):
+        dataframe = pd.DataFrame({
+            "id": [1],
+            "name": ["Alice"]
+        })
+
+        destination = {
+            "schema": "ANALYTICS",
+            "table": "AUTHORS"
+        }
+
+        load_config = {
+            "mode": "full_refresh"
+        }
+
+        mock_connection = MagicMock()
+        mock_get_connection.return_value = mock_connection
+
+        mock_write_pandas.return_value = (
+            False,
+            0,
+            0,
+            "Simulated loading failure"
+        )
+
+        with patch.dict(
+            "os.environ",
+            {"SNOWFLAKE_DATABASE": "TEST_DB"}
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "Snowflake load failed"
+            ):
+                snowflake.load_data(
+                    dataframe,
+                    destination,
+                    load_config
+                )
+
+        mock_connection.close.assert_called_once()
+
+
 
 if __name__ == "__main__":
     unittest.main()
