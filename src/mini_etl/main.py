@@ -1,15 +1,23 @@
 import argparse
 import logging
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 from dotenv import load_dotenv
+
 from mini_etl.config.loader import load_pipeline_config
 from mini_etl.destinations import postgresql
 from mini_etl.destinations import snowflake
+from mini_etl.metadata.metadata import (
+    create_metadata_engine,
+    create_session_factory,
+)
+from mini_etl.metadata.repository import PipelineRunRepository
 from mini_etl.sources.sqlserver import extract_data
 
+
 # --------------------------------------------------
-#  Project configuration
+# Project configuration
 # --------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -24,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 # --------------------------------------------------
-#  Destination router
+# Destination router
 # --------------------------------------------------
 def load_data(
     dataframe: pd.DataFrame,
@@ -56,23 +64,60 @@ def load_data(
             f"{destination_type}"
         )
 
-# --------------------------------------------------
-#  Run pipeline
-# --------------------------------------------------
-def run_pipeline(pipeline_name: str):
-    logger.info(
-        "MiniETL pipeline started: %s",
-        pipeline_name
-    )
 
+# --------------------------------------------------
+# Run pipeline
+# --------------------------------------------------
+def run_pipeline(pipeline_name: str) -> None:
     config = load_pipeline_config(pipeline_name)
-
-    dataframe = extract_data(config["source"])
-    load_data(dataframe, config)
+    pipeline_id = config["pipeline"]["id"]
 
     logger.info(
-        "MiniETL pipeline completed successfully"
+        "MiniETL pipeline started: %s (id=%s)",
+        pipeline_name,
+        pipeline_id
     )
+
+    metadata_engine = create_metadata_engine()
+
+    try:
+        session_factory = create_session_factory(metadata_engine)
+
+        with session_factory() as session:
+            repository = PipelineRunRepository(session)
+
+            # Commit the run record before extraction/loading starts.
+            # This ensures a later ETL failure cannot roll back the record.
+            with session.begin():
+                run = repository.create_run(pipeline_id)
+                run_id = run.id
+
+            try:
+                dataframe = extract_data(config["source"])
+                load_data(dataframe, config)
+
+            except Exception as exc:
+                with session.begin():
+                    repository.mark_failed(run_id, str(exc))
+
+                logger.exception(
+                    "MiniETL pipeline failed: %s",
+                    pipeline_name
+                )
+                raise
+
+            else:
+                with session.begin():
+                    repository.mark_succeeded(run_id)
+
+                logger.info(
+                    "MiniETL pipeline completed successfully: %s",
+                    pipeline_name
+                )
+
+    finally:
+        metadata_engine.dispose()
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -91,4 +136,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
