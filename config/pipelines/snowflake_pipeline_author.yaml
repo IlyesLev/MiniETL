@@ -1,4 +1,5 @@
 pipeline:
+  id: 2
   name: snowflake_pipeline_author
   description: import Author records into Snowflake
 
