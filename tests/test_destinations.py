@@ -1,8 +1,11 @@
 import unittest
 from unittest.mock import MagicMock, patch
+
 import pandas as pd
+
 from mini_etl.destinations import postgresql
 from mini_etl.destinations import snowflake
+
 
 class TestPostgreSQLDestination(unittest.TestCase):
 
@@ -27,10 +30,14 @@ class TestPostgreSQLDestination(unittest.TestCase):
 
         mock_engine.assert_not_called()
 
-
+    @patch("mini_etl.destinations.postgresql.pd.DataFrame.to_sql")
     @patch("mini_etl.destinations.postgresql.get_postgresql_engine")
-    def test_loads_non_empty_dataframe(self, mock_get_engine):
-        dataframe = pd.DataFrame({"id": [1], "name": ["Alice"]})
+    def test_loads_non_empty_dataframe(
+        self,
+        mock_get_engine,
+        mock_to_sql,
+    ):
+        dataframe = pd.DataFrame({"id": [1, 2], "name": ["Alice", "Bob"]})
 
         destination = {
             "schema": "public",
@@ -47,12 +54,11 @@ class TestPostgreSQLDestination(unittest.TestCase):
         mock_engine.begin.return_value.__enter__.return_value = mock_connection
         mock_get_engine.return_value = mock_engine
 
-        with patch.object(dataframe, "to_sql") as mock_to_sql:
-            postgresql.load_data(
-                dataframe,
-                destination,
-                load_config
-            )
+        postgresql.load_data(
+            dataframe,
+            destination,
+            load_config
+        )
 
         mock_to_sql.assert_called_once_with(
             name="authors",
@@ -64,8 +70,18 @@ class TestPostgreSQLDestination(unittest.TestCase):
             method="multi"
         )
 
+        loaded_dataframe = mock_to_sql.call_args.args[0]
+        self.assertIn("load_timestamp", loaded_dataframe.columns)
+        self.assertEqual(
+            loaded_dataframe["load_timestamp"].nunique(),
+            1,
+        )
+        self.assertEqual(
+            str(loaded_dataframe["load_timestamp"].dt.tz),
+            "UTC",
+        )
+        self.assertNotIn("load_timestamp", dataframe.columns)
         mock_engine.dispose.assert_called_once()
-
 
     @patch("mini_etl.destinations.postgresql.get_postgresql_engine")
     def test_failed_load_disposes_engine(self, mock_get_engine):
@@ -107,8 +123,16 @@ class TestPostgreSQLDestination(unittest.TestCase):
 
         mock_get_engine.assert_not_called()
 
+    @patch(
+        "mini_etl.destinations.postgresql.pd.DataFrame.to_sql",
+        side_effect=RuntimeError("Write failed"),
+    )
     @patch("mini_etl.destinations.postgresql.get_postgresql_engine")
-    def test_failed_to_sql_disposes_engine(self, mock_get_engine):
+    def test_failed_to_sql_disposes_engine(
+        self,
+        mock_get_engine,
+        mock_to_sql,
+    ):
         dataframe = pd.DataFrame({"id": [1]})
 
         mock_engine = MagicMock()
@@ -117,17 +141,12 @@ class TestPostgreSQLDestination(unittest.TestCase):
         mock_engine.begin.return_value.__enter__.return_value = mock_connection
         mock_get_engine.return_value = mock_engine
 
-        with patch.object(
-            dataframe,
-            "to_sql",
-            side_effect=RuntimeError("Write failed"),
-        ):
-            with self.assertRaisesRegex(RuntimeError, "Write failed"):
-                postgresql.load_data(
-                    dataframe,
-                    {"schema": "public", "table": "users"},
-                    {"mode": "full_refresh"},
-                )
+        with self.assertRaisesRegex(RuntimeError, "Write failed"):
+            postgresql.load_data(
+                dataframe,
+                {"schema": "public", "table": "users"},
+                {"mode": "full_refresh"},
+            )
 
         mock_engine.dispose.assert_called_once()
 
@@ -155,7 +174,6 @@ class TestSnowflakeDestination(unittest.TestCase):
 
         mock_connection.assert_not_called()
 
-
     @patch("mini_etl.destinations.snowflake.write_pandas")
     @patch("mini_etl.destinations.snowflake.get_snowflake_connection")
     def test_loads_non_empty_dataframe(
@@ -164,8 +182,8 @@ class TestSnowflakeDestination(unittest.TestCase):
         mock_write_pandas
     ):
         dataframe = pd.DataFrame({
-            "id": [1],
-            "name": ["Alice"]
+            "id": [1, 2],
+            "name": ["Alice", "Bob"]
         })
 
         destination = {
@@ -183,7 +201,7 @@ class TestSnowflakeDestination(unittest.TestCase):
         mock_write_pandas.return_value = (
             True,
             1,
-            1,
+            2,
             "Successfully loaded"
         )
 
@@ -198,31 +216,28 @@ class TestSnowflakeDestination(unittest.TestCase):
             )
 
         mock_get_connection.assert_called_once()
-
         mock_write_pandas.assert_called_once()
 
         call_kwargs = mock_write_pandas.call_args.kwargs
+        loaded_dataframe = call_kwargs["df"]
 
         self.assertEqual(
-            list(call_kwargs["df"].columns),
-            ["ID", "NAME"]
+            list(loaded_dataframe.columns),
+            ["ID", "NAME", "LOAD_TIMESTAMP"]
         )
-
         self.assertEqual(
-            call_kwargs["table_name"],
-            "AUTHORS"
+            loaded_dataframe["LOAD_TIMESTAMP"].nunique(),
+            1,
         )
-
         self.assertEqual(
-            call_kwargs["schema"],
-            "ANALYTICS"
+            str(loaded_dataframe["LOAD_TIMESTAMP"].dt.tz),
+            "UTC",
         )
+        self.assertNotIn("load_timestamp", dataframe.columns)
 
-        self.assertEqual(
-            call_kwargs["database"],
-            "TEST_DB"
-        )
-
+        self.assertEqual(call_kwargs["table_name"], "AUTHORS")
+        self.assertEqual(call_kwargs["schema"], "ANALYTICS")
+        self.assertEqual(call_kwargs["database"], "TEST_DB")
         self.assertTrue(call_kwargs["overwrite"])
         self.assertTrue(call_kwargs["auto_create_table"])
         self.assertFalse(call_kwargs["quote_identifiers"])
@@ -230,7 +245,6 @@ class TestSnowflakeDestination(unittest.TestCase):
         mock_connection.cursor.assert_called_once()
         mock_connection.close.assert_called_once()
 
-        
     @patch("mini_etl.destinations.snowflake.write_pandas")
     @patch("mini_etl.destinations.snowflake.get_snowflake_connection")
     def test_exception_during_load_closes_connection(
@@ -274,7 +288,6 @@ class TestSnowflakeDestination(unittest.TestCase):
                 )
 
         mock_connection.close.assert_called_once()
-
 
     @patch("mini_etl.destinations.snowflake.write_pandas")
     @patch("mini_etl.destinations.snowflake.get_snowflake_connection")
@@ -322,7 +335,6 @@ class TestSnowflakeDestination(unittest.TestCase):
                 )
 
         mock_connection.close.assert_called_once()
-
 
 
 if __name__ == "__main__":
