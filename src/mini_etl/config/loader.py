@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 import yaml
@@ -61,5 +60,17 @@ def load_pipeline_config(pipeline_name: str) -> dict:
                     f"Missing or empty required key "
                     f"'{section}.{key}' in {config_path}"
                 )
+
+    pipeline_id = config["pipeline"].get("id")
+    if isinstance(pipeline_id, bool) or not isinstance(pipeline_id, int):
+        raise ValueError(
+            f"Missing or invalid required integer key "
+            f"'pipeline.id' in {config_path}"
+        )
+
+    if not 1 <= pipeline_id <= 32767:
+        raise ValueError(
+            f"'pipeline.id' must be between 1 and 32767 in {config_path}"
+        )
 
     return config

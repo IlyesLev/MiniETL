@@ -11,6 +11,7 @@ dependencies = [
     "PyYAML",
     "SQLAlchemy",
     "python-dotenv",
+    "psycopg[binary]",
 ]
 
 [tool.setuptools.packages.find]

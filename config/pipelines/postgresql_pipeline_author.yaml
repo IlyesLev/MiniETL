@@ -1,4 +1,5 @@
 pipeline:
+  id: 1
   name: postgresql_pipeline_author
   description: import Author records into PostgreSQL
 
