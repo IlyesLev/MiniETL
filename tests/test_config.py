@@ -144,7 +144,7 @@ class TestLoadPipelineConfig(unittest.TestCase):
 
                 with self.assertRaisesRegex(
                     ValueError,
-                    rf"{section}\\.{key}"
+                    rf"{section}\.{key}"
                 ):
                     self._load_config(name)
 
@@ -175,7 +175,7 @@ class TestLoadPipelineConfig(unittest.TestCase):
 
                 with self.assertRaisesRegex(
                     ValueError,
-                    rf"{section}\\.{key}"
+                    rf"{section}\.{key}"
                 ):
                     self._load_config(name)
 
