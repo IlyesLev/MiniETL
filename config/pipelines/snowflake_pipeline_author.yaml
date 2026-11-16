@@ -10,8 +10,8 @@ source:
 
 destination:
   type: snowflake
-  schema: PUBLIC
-  table: AUTHOR
+  schema: minietl
+  table: author
 
 load:
   mode: full_refresh
