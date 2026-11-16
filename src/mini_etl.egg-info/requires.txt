@@ -1,3 +1,4 @@
 PyYAML
 SQLAlchemy
 python-dotenv
+psycopg[binary]

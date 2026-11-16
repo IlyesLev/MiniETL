@@ -12,7 +12,7 @@ src/mini_etl/destinations/__init__.py
 src/mini_etl/destinations/postgresql.py
 src/mini_etl/destinations/snowflake.py
 src/mini_etl/metadata/__init__.py
-src/mini_etl/metadata/database.py
+src/mini_etl/metadata/metadata.py
 src/mini_etl/metadata/model.py
 src/mini_etl/metadata/repository.py
 src/mini_etl/pipeline/__init__.py

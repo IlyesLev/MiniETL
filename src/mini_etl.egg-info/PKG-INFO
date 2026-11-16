@@ -6,3 +6,4 @@ Requires-Python: >=3.10
 Requires-Dist: PyYAML
 Requires-Dist: SQLAlchemy
 Requires-Dist: python-dotenv
+Requires-Dist: psycopg[binary]
