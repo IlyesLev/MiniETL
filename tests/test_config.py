@@ -1,4 +1,3 @@
-
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,6 +16,7 @@ class TestLoadPipelineConfig(unittest.TestCase):
 
         self.valid_config = {
             "pipeline": {
+                "id": 1,
                 "name": "test_pipeline",
                 "description": "Test pipeline"
             },
@@ -58,14 +58,37 @@ class TestLoadPipelineConfig(unittest.TestCase):
 
         config = self._load_config("test_pipeline")
 
+        self.assertEqual(config["pipeline"]["id"], 1)
         self.assertEqual(
             config["pipeline"]["name"],
             "test_pipeline"
         )
-        self.assertEqual(
-            config["source"]["type"],
-            "sqlserver"
-        )
+        self.assertEqual(config["source"]["type"], "sqlserver")
+
+    def test_rejects_missing_pipeline_id(self):
+        config = {
+            section: values.copy()
+            for section, values in self.valid_config.items()
+        }
+        del config["pipeline"]["id"]
+        self._write_config("missing_pipeline_id", config)
+
+        with self.assertRaisesRegex(ValueError, "pipeline.id"):
+            self._load_config("missing_pipeline_id")
+
+    def test_rejects_non_integer_pipeline_id(self):
+        for invalid_id in ("1", 1.5, True, 0, 32768):
+            with self.subTest(pipeline_id=invalid_id):
+                config = {
+                    section: values.copy()
+                    for section, values in self.valid_config.items()
+                }
+                config["pipeline"]["id"] = invalid_id
+                name = f"invalid_pipeline_id_{str(invalid_id).lower()}"
+                self._write_config(name, config)
+
+                with self.assertRaises(ValueError):
+                    self._load_config(name)
 
     def test_missing_config_file(self):
         with self.assertRaises(FileNotFoundError):
@@ -73,7 +96,7 @@ class TestLoadPipelineConfig(unittest.TestCase):
 
     def test_missing_required_section(self):
         config = {
-            "pipeline": {"name": "incomplete_pipeline"},
+            "pipeline": {"id": 1, "name": "incomplete_pipeline"},
             "source": {"type": "sqlserver"}
         }
 
@@ -83,7 +106,10 @@ class TestLoadPipelineConfig(unittest.TestCase):
             self._load_config("incomplete_pipeline")
 
     def test_empty_required_section(self):
-        config = self.valid_config.copy()
+        config = {
+            section: values.copy()
+            for section, values in self.valid_config.items()
+        }
         config["pipeline"] = {}
 
         self._write_config("empty_section", config)
@@ -118,7 +144,7 @@ class TestLoadPipelineConfig(unittest.TestCase):
 
                 with self.assertRaisesRegex(
                     ValueError,
-                    rf"{section}\.{key}"
+                    rf"{section}\\.{key}"
                 ):
                     self._load_config(name)
 
@@ -149,7 +175,7 @@ class TestLoadPipelineConfig(unittest.TestCase):
 
                 with self.assertRaisesRegex(
                     ValueError,
-                    rf"{section}\.{key}"
+                    rf"{section}\\.{key}"
                 ):
                     self._load_config(name)
 
@@ -159,6 +185,7 @@ class TestLoadPipelineConfig(unittest.TestCase):
         config_file.write_text(
             """
 pipeline:
+  id: 1
   name: test_pipeline
 source:
   type: sqlserver
