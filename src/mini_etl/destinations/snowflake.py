@@ -3,6 +3,7 @@ import os
 import re
 from pathlib import Path
 
+import pandas as pd
 import snowflake.connector
 from snowflake.connector.pandas_tools import write_pandas
 
@@ -59,7 +60,9 @@ def load_data(dataframe, destination, load_config):
         )
         return
 
+    # Use one UTC timestamp for every row in this full-refresh operation.
     dataframe = dataframe.copy()
+    dataframe["load_timestamp"] = pd.Timestamp.now(tz="UTC")
     dataframe.columns = [
         str(column).upper()
         for column in dataframe.columns

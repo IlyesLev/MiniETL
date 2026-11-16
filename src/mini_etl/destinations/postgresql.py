@@ -1,8 +1,11 @@
 import os
 import logging
+
+import pandas as pd
 from sqlalchemy import create_engine, URL
 
 logger = logging.getLogger(__name__)
+
 
 def get_postgresql_engine():
     connection_url = URL.create(
@@ -41,6 +44,10 @@ def load_data(dataframe, destination, load_config):
         )
         return
 
+    # Use one UTC timestamp for every row in this full-refresh operation.
+    dataframe = dataframe.copy()
+    dataframe["load_timestamp"] = pd.Timestamp.now(tz="UTC")
+
     engine = get_postgresql_engine()
 
     try:
@@ -63,4 +70,3 @@ def load_data(dataframe, destination, load_config):
 
     finally:
         engine.dispose()
-
