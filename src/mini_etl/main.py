@@ -1,5 +1,6 @@
 import argparse
 import logging
+from contextlib import closing
 from pathlib import Path
 
 import pandas as pd
@@ -13,7 +14,7 @@ from mini_etl.metadata.metadata import (
     create_session_factory,
 )
 from mini_etl.metadata.repository import PipelineRunRepository
-from mini_etl.sources.sqlserver import extract_data
+from mini_etl.sources.sqlserver import extract_tables
 
 
 # --------------------------------------------------
@@ -65,6 +66,21 @@ def load_data(
         )
 
 
+def load_tables(config: dict) -> None:
+    """Extract and load each configured or discovered source table."""
+    with closing(extract_tables(config["source"])) as tables:
+        for source_table, dataframe in tables:
+            destination = config["destination"].copy()
+            destination.setdefault("table", source_table)
+            load_data(
+                dataframe,
+                {
+                    "destination": destination,
+                    "load": config["load"],
+                },
+            )
+
+
 # --------------------------------------------------
 # Run pipeline
 # --------------------------------------------------
@@ -93,8 +109,7 @@ def run_pipeline(pipeline_name: str) -> None:
                 run_id = run.id
 
             try:
-                dataframe = extract_data(config["source"])
-                load_data(dataframe, config)
+                load_tables(config)
 
             except Exception as exc:
                 with session.begin():

@@ -2,8 +2,10 @@ import os
 import pyodbc
 import pandas as pd
 import logging
+from collections.abc import Iterator
 
 logger = logging.getLogger(__name__)
+
 
 def get_connection():
     trusted = os.getenv(
@@ -29,10 +31,11 @@ def get_connection():
     return pyodbc.connect(connection_string)
 
 
-def extract_data(source_config: dict) -> pd.DataFrame:
-    schema = source_config["schema"]
-    table = source_config["table"]
-
+def _extract_table(
+    connection,
+    schema: str,
+    table: str,
+) -> pd.DataFrame:
     query = (
         f"SELECT * FROM "
         f"[{schema.replace(']', ']]')}]."
@@ -45,18 +48,72 @@ def extract_data(source_config: dict) -> pd.DataFrame:
         table
     )
 
-    connection = get_connection()
-
-    try:
-        dataframe = pd.read_sql_query(query, connection)
-    finally:
-        connection.close()
+    dataframe = pd.read_sql_query(query, connection)
 
     logger.info(
-        "Extracted %s rows and %s columns",
+        "Extracted %s rows and %s columns from %s.%s",
         len(dataframe),
-        len(dataframe.columns)
+        len(dataframe.columns),
+        schema,
+        table,
     )
 
     return dataframe
+
+
+def extract_data(source_config: dict) -> pd.DataFrame:
+    """Extract one configured table from SQL Server."""
+    connection = get_connection()
+
+    try:
+        dataframe = _extract_table(
+            connection,
+            source_config["schema"],
+            source_config["table"],
+        )
+    finally:
+        connection.close()
+
+    return dataframe
+
+
+def extract_tables(
+    source_config: dict,
+) -> Iterator[tuple[str, pd.DataFrame]]:
+    """Yield each configured or schema-discovered table with its data."""
+    schema = source_config["schema"]
+    connection = get_connection()
+
+    try:
+        if "table" in source_config:
+            table_names = [source_config["table"]]
+        else:
+            table_query = """
+                SELECT TABLE_NAME
+                FROM INFORMATION_SCHEMA.TABLES
+                WHERE TABLE_SCHEMA = ?
+                  AND TABLE_TYPE = 'BASE TABLE'
+                ORDER BY TABLE_NAME
+            """
+            tables = pd.read_sql_query(
+                table_query,
+                connection,
+                params=[schema],
+            )
+            table_names = tables["TABLE_NAME"].tolist()
+
+            logger.info(
+                "Found %s base tables in SQL Server schema %s",
+                len(table_names),
+                schema,
+            )
+
+        for table_name in table_names:
+            yield table_name, _extract_table(
+                connection,
+                schema,
+                table_name,
+            )
+    finally:
+        connection.close()
 

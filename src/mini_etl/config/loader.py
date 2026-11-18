@@ -46,8 +46,8 @@ def load_pipeline_config(pipeline_name: str) -> dict:
 
     required_keys = {
         "pipeline": ["name"],
-        "source": ["type", "schema", "table"],
-        "destination": ["type", "schema", "table"],
+        "source": ["type", "schema"],
+        "destination": ["type", "schema"],
         "load": ["mode"],
     }
 
@@ -59,6 +59,15 @@ def load_pipeline_config(pipeline_name: str) -> dict:
                 raise ValueError(
                     f"Missing or empty required key "
                     f"'{section}.{key}' in {config_path}"
+                )
+
+    for section in ("source", "destination"):
+        if section in config and "table" in config[section]:
+            table = config[section]["table"]
+            if not isinstance(table, str) or not table.strip():
+                raise ValueError(
+                    f"Missing or empty optional key "
+                    f"'{section}.table' in {config_path}"
                 )
 
     pipeline_id = config["pipeline"].get("id")

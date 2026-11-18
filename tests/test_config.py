@@ -22,13 +22,11 @@ class TestLoadPipelineConfig(unittest.TestCase):
             },
             "source": {
                 "type": "sqlserver",
-                "schema": "dbo",
-                "table": "Author"
+                "schema": "dbo"
             },
             "destination": {
                 "type": "postgresql",
-                "schema": "public",
-                "table": "author"
+                "schema": "public"
             },
             "load": {
                 "mode": "full_refresh"
@@ -122,10 +120,8 @@ class TestLoadPipelineConfig(unittest.TestCase):
             ("pipeline", "name"),
             ("source", "type"),
             ("source", "schema"),
-            ("source", "table"),
             ("destination", "type"),
             ("destination", "schema"),
-            ("destination", "table"),
             ("load", "mode")
         ]
 
@@ -153,10 +149,8 @@ class TestLoadPipelineConfig(unittest.TestCase):
             ("pipeline", "name"),
             ("source", "type"),
             ("source", "schema"),
-            ("source", "table"),
             ("destination", "type"),
             ("destination", "schema"),
-            ("destination", "table"),
             ("load", "mode")
         ]
 
