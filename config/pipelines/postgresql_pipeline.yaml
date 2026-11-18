@@ -1,6 +1,6 @@
 pipeline:
   id: 1
-  name: postgresql_pipeline_author
+  name: postgresql_pipeline
   description: import all dbo tables into PostgreSQL
 
 source:

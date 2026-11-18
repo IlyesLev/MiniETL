@@ -1,6 +1,6 @@
 pipeline:
   id: 2
-  name: snowflake_pipeline_author
+  name: snowflake_pipeline
   description: import all dbo tables into Snowflake
 
 source:
@@ -9,7 +9,7 @@ source:
 
 destination:
   type: snowflake
-  schema: minietl
+  schema: raw
 
 load:
   mode: full_refresh
