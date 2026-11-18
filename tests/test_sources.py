@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
@@ -33,7 +33,10 @@ class TestSQLServerSource(unittest.TestCase):
         discovery_query = mock_read_sql_query.call_args_list[0]
         self.assertIn("INFORMATION_SCHEMA.TABLES", discovery_query.args[0])
         self.assertEqual(discovery_query.kwargs["params"], ["dbo"])
-        self.assertIn("[dbo].[Author]", mock_read_sql_query.call_args_list[1].args[0])
+        self.assertIn(
+            "[dbo].[Author]",
+            mock_read_sql_query.call_args_list[1].args[0],
+        )
         self.assertIn(
             "[dbo].[Book]]Entry]",
             mock_read_sql_query.call_args_list[2].args[0],
